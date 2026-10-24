@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mis gastos</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{--bg:#f7f7f5;--fg:#1c1c1a;--card:#fff;--mut:#6b6b66;--ac:#1d6f5c;--bd:#e2e2dc;--wa:#b45309}
+@media(prefers-color-scheme:dark){:root{--bg:#141413;--fg:#ececea;--card:#1e1e1c;--mut:#a0a09a;--ac:#4fc3a1;--bd:#333330;--wa:#f5b04c}}
+*{box-sizing:border-box}
+body{margin:0;font:16px/1.5 system-ui,sans-serif;background:var(--bg);color:var(--fg)}
+main{max-width:760px;margin:0 auto;padding:16px}
+h1{font-size:1.5rem;margin:8px 0}h2{font-size:1.05rem;margin:0 0 10px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:16px;margin:14px 0}
+.mut{color:var(--mut);font-size:.9rem}.wa{color:var(--wa);font-size:.9rem}
+button,.btn{background:var(--ac);color:#fff;border:0;border-radius:8px;padding:10px 16px;font:inherit;cursor:pointer}
+button.s{background:transparent;color:var(--ac);border:1px solid var(--ac)}
+input[type=text]{width:100%;padding:10px;border:1px solid var(--bd);border-radius:8px;font:inherit;background:var(--bg);color:var(--fg)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.kpi b{display:block;font-size:1.4rem}
+.b{display:grid;grid-template-columns:110px 1fr 90px;gap:8px;align-items:center;margin:6px 0;font-size:.9rem}
+.b i{height:12px;border-radius:6px;background:var(--ac);width:var(--w);min-width:2px}
+.b b{text-align:right;font-weight:600}
+#log{max-height:340px;overflow:auto}
+.m{margin:8px 0;padding:8px 12px;border-radius:10px;background:var(--bg)}
+.m.u{background:var(--ac);color:#fff;margin-left:20%}
+table{width:100%;border-collapse:collapse;font-size:.9rem}td{padding:4px 6px;border-bottom:1px solid var(--bd)}
+.chips button{margin:4px 4px 0 0;padding:6px 10px;font-size:.85rem}
+.hide{display:none}
+</style>
+</head>
+<body>
+<main>
+<h1>Mis gastos</h1>
+<p class="mut">Sube tus Excel o CSV mensuales (columnas FECHA, CANTIDAD, GASTO, ESPECIFICACIÓN). Todo se calcula en tu navegador: los datos no se envían a ningún servidor.</p>
+
+<div class="card">
+  <input type="file" id="f" accept=".xlsx,.xls,.csv" multiple class="hide">
+  <button onclick="f.click()">Subir ficheros</button>
+  <button class="s" onclick="borrar()">Borrar datos guardados</button>
+  <div id="msg" class="mut" style="margin-top:8px"></div>
+  <div id="warn" class="wa"></div>
+</div>
+
+<div id="app" class="hide">
+  <div class="card"><div class="kpis" id="kpis"></div></div>
+  <div class="card"><h2>Por mes</h2><div id="porMes"></div></div>
+  <div class="card"><h2>Por categoría</h2><div id="porCat"></div></div>
+  <div class="card">
+    <h2>Pregunta sobre tus gastos</h2>
+    <div class="chips" id="chips"></div>
+    <div id="log"></div>
+    <form onsubmit="return enviar()" style="margin-top:10px"><input type="text" id="q" placeholder="Ej: ¿cuánto gasté en comida en septiembre?" autocomplete="off"></form>
+  </div>
+</div>
+</main>
+
+<script>
+const MESES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const STOP=new Set('cuanto cuantos cuantas gaste gastado gastos gasto total media promedio mayor veces mes mas caro por que para del los las una con mis mio este ultimo pasado categoria categorias desglose reparto numero top maximo euros'.split(' '));
+const $=id=>document.getElementById(id);
+const norm=s=>String(s??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const eur=n=>n.toLocaleString('es-ES',{style:'currency',currency:'EUR'});
+const mesTxt=m=>MESES[+m.slice(5)-1]+' '+m.slice(0,4);
+const sum=a=>a.reduce((t,x)=>t+x.cant,0);
+const group=(a,k)=>a.reduce((o,x)=>(o[x[k]]=(o[x[k]]||0)+x.cant,o),{});
+let rows=[];
+
+function num(x){
+  if(typeof x==='number')return x;
+  if(x==null||x==='')return null;
+  let s=String(x).replace(/[€\s]/g,'');
+  s=(s.includes(',')&&s.includes('.'))?s.replace(/\./g,'').replace(',','.'):s.replace(',','.');
+  const v=parseFloat(s);return isNaN(v)?null:v;
+}
+function dat(x){
+  if(typeof x==='number'&&x>20000&&x<80000)
+    return new Date(Date.UTC(1899,11,30)+Math.floor(x)*864e5).toISOString().slice(0,10);
+  const s=String(x??'').trim();
+  let m=s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})/);
+  if(m){const y=m[3].length===2?'20'+m[3]:m[3];return `${y}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`}
+  m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m?m[0]:null;
+}
+async function leer(file){
+  const buf=await file.arrayBuffer(),out=[];
+  if(/\.csv$/i.test(file.name)){
+    let t;try{t=new TextDecoder('utf-8',{fatal:true}).decode(buf)}catch{t=new TextDecoder('windows-1252').decode(buf)}
+    const L=t.split(/\r?\n/).filter(l=>l.replace(/[;,]/g,'').trim());
+    const d=L.slice(0,3).some(l=>l.includes(';'))?';':',';
+    out.push({src:file.name,aoa:L.map(l=>l.split(d))});
+  }else{
+    const wb=XLSX.read(buf,{type:'array'});
+    wb.SheetNames.forEach(s=>out.push({src:file.name+' / '+s,aoa:XLSX.utils.sheet_to_json(wb.Sheets[s],{header:1,raw:true,defval:''})}));
+  }
+  return out;
+}
+function parse(aoa,src){
+  const h=aoa.findIndex(r=>r.some(c=>norm(c)==='fecha')&&r.some(c=>['cantidad','importe'].includes(norm(c))));
+  if(h<0)return{rows:[],err:src+': no encuentro la cabecera FECHA / CANTIDAD'};
+  const H=aoa[h].map(norm),ix=n=>H.findIndex(c=>n.includes(c));
+  const f=ix(['fecha']),a=ix(['cantidad','importe']),c=ix(['gasto','categoria']),e=ix(['especificacion','concepto','descripcion']);
+  const out=[];
+  for(const r of aoa.slice(h+1)){
+    const fe=dat(r[f]),am=num(r[a]);
+    if(!fe||am===null)continue;
+    out.push({fecha:fe,mes:fe.slice(0,7),cant:am,cat:norm(r[c])||'otros',det:String(r[e]??'').trim(),src});
+  }
+  return{rows:out};
+}
+function avisos(all){
+  const w=[];
+  const bySrc=all.reduce((o,x)=>((o[x.src]=o[x.src]||[]).push(x),o),{});
+  for(const[s,a]of Object.entries(bySrc)){
+    const cnt=group(a.map(x=>({mes:x.mes,cant:1})),'mes');
+    const top=Object.entries(cnt).sort((p,q)=>q[1]-p[1])[0][0];
+    a.filter(x=>x.mes!==top).forEach(x=>w.push(`${s}: fecha ${x.fecha} (${esc(x.det||x.cat)}, ${eur(x.cant)}) no coincide con el mes habitual ${top}. ¿Error de año?`));
+  }
+  return w;
+}
+$('f').onchange=async ev=>{
+  const all=[],errs=[];
+  for(const file of ev.target.files){
+    try{for(const s of await leer(file)){const r=parse(s.aoa,s.src);if(r.err)errs.push(r.err);all.push(...r.rows)}}
+    catch(e){errs.push(file.name+': no se pudo leer')}
+  }
+  rows=all;
+  try{localStorage.setItem('gastos_v1',JSON.stringify(rows))}catch{}
+  $('msg').textContent=`${rows.length} gastos cargados.`;
+  $('warn').innerHTML=[...errs.map(esc),...avisos(rows)].join('<br>');
+  pintar();
+};
+function borrar(){try{localStorage.removeItem('gastos_v1')}catch{}rows=[];$('warn').innerHTML='';$('msg').textContent='Datos borrados.';pintar()}
+function bars(entries){
+  const mx=Math.max(...entries.map(e=>e[1]),1);
+  return entries.map(([k,v])=>`<div class="b"><span>${esc(k)}</span><i style="--w:${v/mx*100}%"></i><b>${eur(v)}</b></div>`).join('');
+}
+function pintar(){
+  $('app').classList.toggle('hide',!rows.length);
+  if(!rows.length)return;
+  const pm=group(rows,'mes'),pc=group(rows,'cat'),nm=Object.keys(pm).length;
+  $('kpis').innerHTML=[['Total',eur(sum(rows))],['Meses',nm],['Media al mes',eur(sum(rows)/nm)],['Movimientos',rows.length]]
+    .map(([a,b])=>`<div class="kpi"><span class="mut">${a}</span><b>${b}</b></div>`).join('');
+  $('porMes').innerHTML=bars(Object.entries(pm).sort().map(([k,v])=>[mesTxt(k),v]));
+  $('porCat').innerHTML=bars(Object.entries(pc).sort((a,b)=>b[1]-a[1]));
+  const top=Object.entries(pc).sort((a,b)=>b[1]-a[1])[0][0],last=Object.keys(pm).sort().pop();
+  $('chips').innerHTML=[`¿Cuánto gasté en ${top}?`,'¿Cuánto gasté el último mes?','¿En qué gasto más?','Gastos más grandes','Media al mes']
+    .map(t=>`<button class="s" onclick="pregunta(this.textContent)">${esc(t)}</button>`).join('');
+}
+function responder(q){
+  const n=norm(q);let r=rows,tag=[];
+  const meses=[...new Set(rows.map(x=>x.mes))].sort();
+  const mm=MESES.findIndex(m=>n.includes(m)),ym=n.match(/20\d\d/);
+  if(/ultimo mes|este mes|mes pasado/.test(n)&&meses.length){
+    const m=meses[Math.max(meses.length-(/mes pasado/.test(n)?2:1),0)];r=r.filter(x=>x.mes===m);tag.push(mesTxt(m));
+  }else if(mm>=0){
+    const mo=String(mm+1).padStart(2,'0');
+    r=r.filter(x=>x.mes.slice(5)===mo&&(!ym||x.mes.startsWith(ym[0])));tag.push(MESES[mm]+(ym?' '+ym[0]:''));
+  }else if(ym){r=r.filter(x=>x.mes.startsWith(ym[0]));tag.push(ym[0])}
+  const cats=[...new Set(rows.map(x=>x.cat))].filter(c=>c&&n.includes(c.replace(/s$/,'')));
+  if(cats.length){r=r.filter(x=>cats.includes(x.cat));tag.push(cats.join('/'))}
+  else{
+    const mw=MESES.join(' ');
+    const hit=n.split(/\W+/).filter(w=>w.length>=3&&!STOP.has(w)&&!mw.includes(w)&&!/^20\d\d$/.test(w)&&rows.some(x=>norm(x.det).includes(w)));
+    if(hit.length){r=r.filter(x=>hit.some(w=>norm(x.det).includes(w)));tag.push('«'+hit.join(', ')+'»')}
+  }
+  const t=tag.length?' ('+esc(tag.join(', '))+')':'';
+  if(!r.length)return 'No encuentro gastos con ese filtro'+t+'. Prueba con otro mes o categoría.';
+  if(/mayor|mas caro|mas grande|top|maximo/.test(n)){
+    const tp=[...r].sort((a,b)=>b.cant-a.cant).slice(0,5);
+    return `Los gastos más grandes${t}:<table>`+tp.map(x=>`<tr><td>${x.fecha}</td><td>${esc(x.det||x.cat)}</td><td>${eur(x.cant)}</td></tr>`).join('')+'</table>';
+  }
+  if(/cuantas veces|cuantos|numero de|veces/.test(n))return `Hay <b>${r.length}</b> movimientos${t}, por ${eur(sum(r))}.`;
+  if(/en que|categorias|desglose|reparto/.test(n))
+    return `Desglose${t}:`+bars(Object.entries(group(r,'cat')).sort((a,b)=>b[1]-a[1]));
+  if(/media|promedio/.test(n)){const k=new Set(r.map(x=>x.mes)).size;return `Media${t}: <b>${eur(sum(r)/k)}</b> al mes (${k} ${k>1?'meses':'mes'}).`}
+  return `Total${t}: <b>${eur(sum(r))}</b> en ${r.length} movimientos.`;
+}
+function pregunta(q){
+  $('log').insertAdjacentHTML('beforeend',`<div class="m u">${esc(q)}</div><div class="m">${responder(q)}</div>`);
+  $('log').scrollTop=1e9;
+}
+function enviar(){const q=$('q').value.trim();if(q){pregunta(q);$('q').value=''}return false}
+try{const s=localStorage.getItem('gastos_v1');if(s){rows=JSON.parse(s);$('msg').textContent=rows.length+' gastos recuperados de la última vez.';$('warn').innerHTML=avisos(rows).join('<br>');pintar()}}catch{}
+</script>
+</body>
+</html>
