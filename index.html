@@ -16,7 +16,7 @@ h1{font-size:1.5rem;margin:8px 0}h2{font-size:1.05rem;margin:0 0 10px}
 .mut{color:var(--mut);font-size:.9rem}.wa{color:var(--wa);font-size:.85rem}.neg{color:var(--rd)}
 button{background:var(--ac);color:#fff;border:0;border-radius:8px;padding:9px 14px;font:inherit;cursor:pointer}
 button.s{background:transparent;color:var(--ac);border:1px solid var(--ac)}
-input[type=text],select{padding:9px;border:1px solid var(--bd);border-radius:8px;font:inherit;background:var(--bg);color:var(--fg)}
+input[type=text],input[type=date],input[type=password],select{padding:9px;border:1px solid var(--bd);border-radius:8px;font:inherit;background:var(--bg);color:var(--fg)}
 input[type=text]{width:100%}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
@@ -41,6 +41,7 @@ table{width:100%;border-collapse:collapse;font-size:.88rem}td,th{padding:4px 6px
 .chat{position:sticky;top:12px;height:calc(100vh - 24px);margin:0;display:flex;flex-direction:column}
 .chat .chips{max-height:108px;overflow-y:auto}
 @media(max-width:900px){.lay{grid-template-columns:1fr}.chat{position:static;height:560px}}
+.x{padding:0 7px;font-size:.8rem}
 .hide{display:none}
 </style>
 </head>
@@ -52,9 +53,15 @@ table{width:100%;border-collapse:collapse;font-size:.88rem}td,th{padding:4px 6px
 <div class="card">
   <input type="file" id="f" accept=".xlsx,.xls,.csv" multiple class="hide">
   <button onclick="f.click()">Subir ficheros</button>
-  <button class="s" onclick="borrar()">Borrar datos guardados</button>
+  <button class="s" onclick="borrar()">Borrar datos del navegador</button>
+  <button class="s" onclick="exportar()">Descargar Excel</button>
   <div id="msg" class="mut" style="margin-top:8px"></div>
   <details id="warn" class="wa hide"></details>
+  <details style="margin-top:10px"><summary class="mut">Guardar en GitHub (opcional): conserva tus datos y un historial de versiones</summary>
+    <p class="mut">Crea un repositorio <b>privado</b> distinto al de esta web (por ejemplo <code>mis-gastos-datos</code>, con README) y un token en GitHub → Settings → Developer settings → Fine-grained tokens: solo para ese repo, permiso <i>Contents: Read and write</i> y fecha de caducidad. El token se guarda únicamente en este navegador.</p>
+    <div class="row"><input type="text" id="ghr" placeholder="usuario/repositorio" style="flex:1;min-width:180px"><input type="password" id="ght" placeholder="Token" style="flex:1;min-width:180px"><button onclick="conectar()">Conectar</button><button class="s" onclick="desconectar()">Desconectar</button></div>
+  </details>
+  <div id="sync" class="mut" style="margin-top:6px"></div>
 </div>
 
 <div id="app" class="lay hide"><div>
@@ -65,6 +72,17 @@ table{width:100%;border-collapse:collapse;font-size:.88rem}td,th{padding:4px 6px
     <button class="s" onclick="limpiar()">Ver todo</button>
     <button id="chip" class="hide" onclick="setCat('')"></button>
   </div>
+  <details class="card"><summary><b>Añadir un movimiento</b> <span class="mut">(cuestionario rápido)</span></summary>
+    <div class="row" style="margin-top:10px">
+      <select id="nt"><option value="g">Gasto</option><option value="i">Ingreso</option></select>
+      <input type="date" id="nf">
+      <input type="text" id="na" inputmode="decimal" placeholder="Importe (ej: 12,50)" style="width:150px">
+      <input type="text" id="nc" list="cl" placeholder="Categoría / de quién" style="width:190px">
+      <input type="text" id="nd" placeholder="Detalle (opcional)" style="flex:1;min-width:150px">
+      <button onclick="anadir()">Añadir</button>
+    </div>
+    <datalist id="cl"></datalist><div id="nmsg" class="mut" style="margin-top:6px"></div>
+  </details>
   <div class="card"><div class="kpis" id="kpis"></div></div>
   <div class="card">
     <h2 id="hMes"></h2>
@@ -186,12 +204,86 @@ $('f').onchange=async ev=>{
   wb.innerHTML=`<summary>${w.length} avisos (fechas fuera de su hoja, etc.)</summary>`+w.slice(0,30).map(esc).join('<br>')+(w.length>30?`<br>…y ${w.length-30} más`:'');
   opciones();pintar();
 };
-function guardar(){try{localStorage.setItem('gastos_v2',JSON.stringify(rows))}catch{}}
+let GH=null,sha=null,tm;
+const API=()=>`https://api.github.com/repos/${GH.repo}/contents/data/movimientos.json`;
+const GHH=()=>({Authorization:'Bearer '+GH.token,Accept:'application/vnd.github+json'});
+const b64=s=>{let x='';new TextEncoder().encode(s).forEach(c=>x+=String.fromCharCode(c));return btoa(x)};
+function setSync(m,err){$('sync').textContent=m;$('sync').className=err?'wa':'mut'}
+async function ghLeer(){
+  const r=await fetch(API(),{headers:GHH(),cache:'no-store'});
+  if(r.status===404){sha=null;return null}
+  if(!r.ok)throw new Error('GitHub '+r.status);
+  const j=await r.json();sha=j.sha;
+  const t=j.content?new TextDecoder().decode(Uint8Array.from(atob(j.content.replace(/\n/g,'')),c=>c.charCodeAt(0)))
+    :await(await fetch(API(),{headers:{...GHH(),Accept:'application/vnd.github.raw+json'},cache:'no-store'})).text();
+  return JSON.parse(t);
+}
+async function ghGuardar(){
+  const body={message:'Actualiza movimientos '+new Date().toISOString().slice(0,16).replace('T',' '),content:b64(JSON.stringify(rows)),sha:sha||undefined};
+  const put=()=>fetch(API(),{method:'PUT',headers:{...GHH(),'Content-Type':'application/json'},body:JSON.stringify(body)});
+  let r=await put();
+  if(r.status===409||r.status===422){await ghLeer();body.sha=sha||undefined;r=await put()}
+  if(!r.ok)throw new Error('GitHub '+r.status);
+  sha=(await r.json()).content.sha;
+}
+function guardar(){
+  try{localStorage.setItem('gastos_v2',JSON.stringify(rows))}catch{}
+  if(!GH)return;
+  clearTimeout(tm);setSync('Guardando en GitHub…');
+  tm=setTimeout(async()=>{try{await ghGuardar();setSync('Guardado en GitHub ✓ '+new Date().toLocaleTimeString('es-ES'))}catch(e){setSync('No pude guardar en GitHub: '+e.message,1)}},800);
+}
+async function conectar(){
+  const repo=$('ghr').value.trim(),token=$('ght').value.trim();
+  if(!/^[\w.-]+\/[\w.-]+$/.test(repo)||!token)return setSync('Escribe usuario/repositorio y el token.',1);
+  GH={repo,token};
+  try{
+    const d=await ghLeer();
+    try{localStorage.setItem('gastos_gh',JSON.stringify(GH))}catch{}
+    $('ght').value='';
+    if(d){rows=d;consolidar();try{localStorage.setItem('gastos_v2',JSON.stringify(rows))}catch{}opciones();sync();pintar();setSync(`Conectado ✓ ${rows.length} movimientos cargados desde GitHub.`)}
+    else if(rows.length){await ghGuardar();setSync('Conectado ✓ He creado data/movimientos.json con tus datos actuales.')}
+    else setSync('Conectado ✓ El fichero se creará al guardar el primer dato.');
+  }catch(e){GH=null;setSync('No pude conectar: '+e.message+'. Revisa el nombre del repo y los permisos del token.',1)}
+}
+function desconectar(){GH=null;sha=null;try{localStorage.removeItem('gastos_gh')}catch{}setSync('Desconectado. Los datos siguen en este navegador.')}
+function anadir(){
+  const t=$('nt').value,f=$('nf').value,a=num($('na').value),c=$('nc').value.trim(),d=$('nd').value.trim();
+  if(!f||a===null||a<=0)return $('nmsg').textContent='Pon una fecha y un importe válido.';
+  const x={t,fecha:f,mes:f.slice(0,7),cant:a,det:d,src:'manual'};
+  if(t==='g'){x.c0=norm(c);x.cat=x.c0||'sin categoria'}else{x.cat='ingreso';x.det=(c+' '+d).trim();x.ori=origen(x.det)}
+  rows.push(x);consolidar();guardar();opciones();sync();pintar();
+  $('na').value=$('nd').value='';$('nmsg').textContent='Añadido ✓ '+eur(a)+' ('+(t==='g'?'gasto':'ingreso')+')';
+}
+function del(i){if(i<0||!confirm('¿Borrar este movimiento?'))return;rows.splice(i,1);consolidar();guardar();opciones();sync();pintar()}
 function borrar(){try{localStorage.removeItem('gastos_v2')}catch{}rows=[];$('msg').textContent='Datos borrados.';$('warn').classList.add('hide');pintar()}
+
+/* ---------- exportar a Excel (mismo formato: una hoja por mes) ---------- */
+const ser=iso=>Math.round(Date.UTC(+iso.slice(0,4),+iso.slice(5,7)-1,+iso.slice(8,10))/864e5)+25569;
+function exportar(){
+  if(!rows.length)return alert('No hay datos que exportar.');
+  try{
+    const wb=XLSX.utils.book_new(),ms=[...new Set(rows.map(x=>x.mes))].sort(),orden=(a,b)=>a.fecha.localeCompare(b.fecha);
+    ms.forEach(m=>{
+      const a=rows.filter(x=>x.mes===m),G=a.filter(x=>x.t==='g').sort(orden),I=a.filter(x=>x.t==='i').sort(orden),n=Math.max(G.length,I.length);
+      const aoa=[[],['GASTOS','','','','','INGRESOS'],['FECHA','CANTIDAD','GASTO','ESPECIFICACIÓN','','FECHA','CANTIDAD','PROVENIENCIA']];
+      for(let k=0;k<n;k++){const g=G[k],i=I[k];aoa.push([g?ser(g.fecha):'',g?g.cant:'',g?g.cat:'',g?g.det:'','',i?ser(i.fecha):'',i?i.cant:'',i?i.det:''])}
+      aoa.push(['TOTAL','','','','','TOTAL',''],[],[],['','','BALANCE','']);
+      const ws=XLSX.utils.aoa_to_sheet(aoa),t=4+n;
+      for(let r=3;r<3+n;r++)['A','F'].forEach(c=>{const x=ws[c+(r+1)];if(x&&typeof x.v==='number')x.z='dd/mm/yyyy'});
+      ws['B'+t]={t:'n',f:`SUM(B4:B${t-1})`,v:sum(G)};
+      ws['G'+t]={t:'n',f:`SUM(G4:G${t-1})`,v:sum(I)};
+      ws['D'+(t+3)]={t:'n',f:`G${t}-B${t}`,v:sum(I)-sum(G)};
+      ws['!cols']=[12,11,16,30,3,12,11,28].map(w=>({wch:w}));
+      XLSX.utils.book_append_sheet(wb,ws,(MESES[+m.slice(5)-1][0].toUpperCase()+MESES[+m.slice(5)-1].slice(1)+m.slice(2,4)).slice(0,31));
+    });
+    XLSX.writeFile(wb,'gastos_'+new Date().toISOString().slice(0,10)+'.xlsx');
+  }catch(e){alert('No pude crear el Excel: '+e.message)}
+}
 
 /* ---------- panel ---------- */
 const sel=()=>rows.filter(x=>(!S.y||x.mes.startsWith(S.y))&&(!S.m||x.mes.slice(5)===S.m));
 function opciones(){
+  $('cl').innerHTML=[...new Set(rows.filter(x=>x.t==='g').map(x=>x.cat))].sort().map(c=>`<option value="${esc(c)}">`).join('');
   const ys=[...new Set(rows.map(x=>x.mes.slice(0,4)))].sort();
   $('fy').innerHTML='<option value="">Todos los años</option>'+ys.map(y=>`<option>${y}</option>`).join('');
   $('fm').innerHTML='<option value="">Todos los meses</option>'+MESES.map((m,i)=>`<option value="${String(i+1).padStart(2,'0')}">${m}</option>`).join('');
@@ -224,7 +316,7 @@ function pintar(){
   $('tg').className=S.tab==='g'?'':'s';$('ti').className=S.tab==='i'?'':'s';
   const q=norm($('s').value);
   const L=sub.filter(x=>x.t===S.tab&&(S.tab!=='g'||!S.cat||x.cat===S.cat)&&(!q||norm(x.det+' '+(x.cat||'')+' '+(x.ori||'')).includes(q))).sort((a,b)=>b.fecha.localeCompare(a.fecha));
-  $('tbl').innerHTML='<table>'+L.slice(0,S.n).map(x=>`<tr><td>${x.fecha}</td><td>${esc(x.t==='g'?x.cat:x.ori)}</td><td>${esc(x.det)}</td><td class="r">${eur(x.cant)}</td></tr>`).join('')+'</table>'
+  $('tbl').innerHTML='<table>'+L.slice(0,S.n).map(x=>`<tr><td>${x.fecha}</td><td>${esc(x.t==='g'?x.cat:x.ori)}</td><td>${esc(x.det)}</td><td class="r">${eur(x.cant)}</td><td><button class="s x" title="Borrar" onclick="del(${rows.indexOf(x)})">✕</button></td></tr>`).join('')+'</table>'
     +(L.length>S.n?`<button class="s" onclick="S.n+=40;pintar()">Ver más (${L.length-S.n})</button>`:'')+`<p class="mut">${L.length} movimientos · ${eur(sum(L))}</p>`;
 }
 $('chart').onclick=e=>{const c=e.target.closest('.cm');if(c){S.y=c.dataset.m.slice(0,4);S.m=c.dataset.m.slice(5);S.n=40;sync();pintar()}};
@@ -297,7 +389,14 @@ function pregunta(q){
 }
 function enviar(){const q=$('q').value.trim();if(q){pregunta(q);$('q').value=''}return false}
 
+try{GH=JSON.parse(localStorage.getItem('gastos_gh'))}catch{}
+if(GH)$('ghr').value=GH.repo;
+$('nf').value=new Date().toISOString().slice(0,10);
 try{const s=localStorage.getItem('gastos_v2');if(s){rows=JSON.parse(s);$('msg').textContent=rows.length+' movimientos recuperados de la última vez.';opciones();pintar()}}catch{}
+if(GH)ghLeer().then(d=>{
+  if(d){rows=d;consolidar();try{localStorage.setItem('gastos_v2',JSON.stringify(rows))}catch{}opciones();sync();pintar();setSync(`Sincronizado con GitHub ✓ (${rows.length} movimientos)`)}
+  else setSync('Conectado a GitHub; el fichero se creará al guardar.')
+}).catch(e=>setSync('No pude leer de GitHub: '+e.message,1));
 </script>
 </body>
 </html>
