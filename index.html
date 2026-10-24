@@ -64,15 +64,7 @@ table{width:100%;border-collapse:collapse;font-size:.88rem}td,th{padding:4px 6px
   <div id="sync" class="mut" style="margin-top:6px"></div>
 </div>
 
-<div id="app" class="lay hide"><div>
-  <div class="card row">
-    <span class="mut">Periodo:</span>
-    <select id="fy" onchange="S.y=this.value;S.n=40;pintar()"></select>
-    <select id="fm" onchange="S.m=this.value;S.n=40;pintar()"></select>
-    <button class="s" onclick="limpiar()">Ver todo</button>
-    <button id="chip" class="hide" onclick="setCat('')"></button>
-  </div>
-  <details class="card"><summary><b>Añadir un movimiento</b> <span class="mut">(cuestionario rápido)</span></summary>
+  <details class="card" open><summary style="font-size:1.05rem"><b>➕ Añadir un gasto o ingreso</b></summary>
     <div class="row" style="margin-top:10px">
       <select id="nt"><option value="g">Gasto</option><option value="i">Ingreso</option></select>
       <input type="date" id="nf">
@@ -83,6 +75,14 @@ table{width:100%;border-collapse:collapse;font-size:.88rem}td,th{padding:4px 6px
     </div>
     <datalist id="cl"></datalist><div id="nmsg" class="mut" style="margin-top:6px"></div>
   </details>
+<div id="app" class="lay hide"><div>
+  <div class="card row">
+    <span class="mut">Periodo:</span>
+    <select id="fy" onchange="S.y=this.value;S.n=40;pintar()"></select>
+    <select id="fm" onchange="S.m=this.value;S.n=40;pintar()"></select>
+    <button class="s" onclick="limpiar()">Ver todo</button>
+    <button id="chip" class="hide" onclick="setCat('')"></button>
+  </div>
   <div class="card"><div class="kpis" id="kpis"></div></div>
   <div class="card">
     <h2 id="hMes"></h2>
