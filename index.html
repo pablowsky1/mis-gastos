@@ -10,7 +10,7 @@
 @media(prefers-color-scheme:dark){:root{--bg:#141413;--fg:#ececea;--card:#1e1e1c;--mut:#a0a09a;--ac:#4fc3a1;--rd:#ef8472;--bd:#333330;--wa:#f5b04c}}
 *{box-sizing:border-box}
 body{margin:0;font:16px/1.5 system-ui,sans-serif;background:var(--bg);color:var(--fg)}
-main{max-width:900px;margin:0 auto;padding:16px}
+main{max-width:1280px;margin:0 auto;padding:16px}
 h1{font-size:1.5rem;margin:8px 0}h2{font-size:1.05rem;margin:0 0 10px}
 .card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:16px;margin:14px 0}
 .mut{color:var(--mut);font-size:.9rem}.wa{color:var(--wa);font-size:.85rem}.neg{color:var(--rd)}
@@ -32,11 +32,15 @@ input[type=text]{width:100%}
 .bars i{width:10px;border-radius:3px 3px 0 0;min-height:1px}.bi{background:var(--ac)}.bg{background:var(--rd)}
 .cm small{font-size:.7rem;color:var(--mut)}
 .lg{font-size:.8rem;color:var(--mut)}.lg span{display:inline-block;width:10px;height:10px;border-radius:3px;margin:0 4px 0 10px}
-#log{max-height:380px;overflow:auto}
+#log{flex:1;min-height:0;overflow:auto}
 .m{margin:8px 0;padding:8px 12px;border-radius:10px;background:var(--bg)}
 .m.u{background:var(--ac);color:#fff;margin-left:20%}
 table{width:100%;border-collapse:collapse;font-size:.88rem}td,th{padding:4px 6px;border-bottom:1px solid var(--bd);text-align:left}.r{text-align:right}
 .chips button{margin:4px 4px 0 0;padding:5px 10px;font-size:.82rem}
+.lay{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:16px;align-items:start}
+.chat{position:sticky;top:12px;height:calc(100vh - 24px);margin:0;display:flex;flex-direction:column}
+.chat .chips{max-height:108px;overflow-y:auto}
+@media(max-width:900px){.lay{grid-template-columns:1fr}.chat{position:static;height:560px}}
 .hide{display:none}
 </style>
 </head>
@@ -53,7 +57,7 @@ table{width:100%;border-collapse:collapse;font-size:.88rem}td,th{padding:4px 6px
   <details id="warn" class="wa hide"></details>
 </div>
 
-<div id="app" class="hide">
+<div id="app" class="lay hide"><div>
   <div class="card row">
     <span class="mut">Periodo:</span>
     <select id="fy" onchange="S.y=this.value;S.n=40;pintar()"></select>
@@ -80,12 +84,13 @@ table{width:100%;border-collapse:collapse;font-size:.88rem}td,th{padding:4px 6px
     </div>
     <div id="tbl" style="overflow-x:auto"></div>
   </div>
-  <div class="card">
-    <h2>Pregunta sobre tus cuentas</h2>
+</div>
+  <aside class="card chat">
+    <div class="row" style="justify-content:space-between"><h2>Pregunta sobre tus cuentas</h2><button class="s" style="padding:4px 10px;font-size:.8rem" onclick="$('log').innerHTML=''">Borrar chat</button></div>
     <div class="chips" id="chips"></div>
     <div id="log"></div>
     <form onsubmit="return enviar()" style="margin-top:10px"><input type="text" id="q" placeholder="Ej: ¿cuánto ahorré en 2025?" autocomplete="off"></form>
-  </div>
+  </aside>
 </div>
 </main>
 
@@ -192,6 +197,7 @@ function opciones(){
   $('fm').innerHTML='<option value="">Todos los meses</option>'+MESES.map((m,i)=>`<option value="${String(i+1).padStart(2,'0')}">${m}</option>`).join('');
   $('chips').innerHTML=[`¿Cuánto ahorré en ${ys.at(-1)}?`,'¿Qué mes gasté más?','¿Qué mes ahorré más?',`Compara ${ys.at(-2)||ys[0]} y ${ys.at(-1)}`,'Resumen por año','¿Cuánto me dio mamá?','¿En qué gasto más?','Gastos más grandes','Media de gasto al mes']
     .map(t=>`<button class="s" onclick="pregunta(this.textContent)">${esc(t)}</button>`).join('');
+  if(!$('log').children.length)$('log').innerHTML='<div class="m">¡Hola! Pregúntame por tus gastos, ingresos o ahorro. Toca una sugerencia o escribe tu pregunta.</div>';
 }
 function sync(){$('fy').value=S.y;$('fm').value=S.m}
 function limpiar(){S.y=S.m=S.cat='';S.n=40;sync();pintar()}
