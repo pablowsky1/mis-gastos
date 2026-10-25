@@ -5,50 +5,75 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Mis gastos</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Figtree:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#f7f7f5;--fg:#1c1c1a;--card:#fff;--mut:#6b6b66;--ac:#1d6f5c;--rd:#d9604c;--bd:#e2e2dc;--wa:#b45309}
-@media(prefers-color-scheme:dark){:root{--bg:#141413;--fg:#ececea;--card:#1e1e1c;--mut:#a0a09a;--ac:#4fc3a1;--rd:#ef8472;--bd:#333330;--wa:#f5b04c}}
+:root{--bg:#eef1f6;--card:#fff;--fg:#101828;--mut:#5d6b82;--ac:#3a4bd6;--on:#fff;--rd:#e0485a;--bd:#dde3ec;--wa:#a15c07;--hero:#101b2e}
+@media(prefers-color-scheme:dark){:root{--bg:#0a111d;--card:#121b2c;--fg:#e8edf6;--mut:#93a1b8;--ac:#9aa7ff;--on:#0a111d;--rd:#fb7185;--bd:#223049;--wa:#f5b04c;--hero:#18284a}}
 *{box-sizing:border-box}
-body{margin:0;font:16px/1.5 system-ui,sans-serif;background:var(--bg);color:var(--fg)}
-main{max-width:1280px;margin:0 auto;padding:16px}
-h1{font-size:1.5rem;margin:8px 0}h2{font-size:1.05rem;margin:0 0 10px}
-.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:16px;margin:14px 0}
-.mut{color:var(--mut);font-size:.9rem}.wa{color:var(--wa);font-size:.85rem}.neg{color:var(--rd)}
-button{background:var(--ac);color:#fff;border:0;border-radius:8px;padding:9px 14px;font:inherit;cursor:pointer}
-button.s{background:transparent;color:var(--ac);border:1px solid var(--ac)}
-input[type=text],input[type=date],input[type=password],select{padding:9px;border:1px solid var(--bd);border-radius:8px;font:inherit;background:var(--bg);color:var(--fg)}
+body{margin:0;font:16px/1.55 'Figtree',system-ui,sans-serif;background:var(--bg);color:var(--fg);font-variant-numeric:tabular-nums}
+main{max-width:1280px;margin:0 auto;padding:22px 16px 48px}
+h1,h2,.kpi b,summary,.dt{font-family:'Bricolage Grotesque','Figtree',system-ui,sans-serif}
+h1{font-size:2rem;font-weight:700;letter-spacing:-.025em;margin:6px 0 4px}
+h2{font-size:1.1rem;font-weight:650;letter-spacing:-.01em;margin:0 0 12px}
+.sub{margin:0 0 18px;color:var(--mut);max-width:72ch}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:18px;margin:14px 0}
+.mut{color:var(--mut);font-size:.9rem}.wa{color:var(--wa);font-size:.88rem}.neg{color:var(--rd)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+summary{cursor:pointer;font-weight:650;font-size:1.05rem}
+button{background:var(--ac);color:var(--on);border:0;border-radius:10px;padding:9px 16px;font:inherit;font-weight:600;cursor:pointer}
+button:hover{filter:brightness(1.08)}
+button.s{background:transparent;color:var(--ac);box-shadow:inset 0 0 0 1.5px var(--ac)}
+button.x{padding:2px 8px;font-size:.8rem;font-weight:500}
+:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+input[type=text],input[type=date],input[type=password],select{padding:9px 11px;border:1px solid var(--bd);border-radius:10px;font:inherit;background:var(--bg);color:var(--fg)}
 input[type=text]{width:100%}
-.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
-.kpi b{display:block;font-size:1.3rem}
-.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:0 14px}
-.b{display:grid;grid-template-columns:105px 1fr 85px;gap:8px;align-items:center;margin:4px 0;padding:2px 4px;font-size:.88rem;border-radius:6px}
-.b[data-k]{cursor:pointer}.b.on{background:var(--bg);outline:1px solid var(--ac)}
-.b i{height:12px;border-radius:6px;background:var(--ac);width:var(--w);min-width:2px}
-.b b{text-align:right;font-weight:600}
-.ch{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px}
-.cm{cursor:pointer;text-align:center;padding:2px;border-radius:6px;flex:0 0 auto}.cm.on{background:var(--bg);outline:1px solid var(--ac)}
-.bars{display:flex;gap:2px;align-items:flex-end;height:120px}
-.bars i{width:10px;border-radius:3px 3px 0 0;min-height:1px}.bi{background:var(--ac)}.bg{background:var(--rd)}
-.cm small{font-size:.7rem;color:var(--mut)}
-.lg{font-size:.8rem;color:var(--mut)}.lg span{display:inline-block;width:10px;height:10px;border-radius:3px;margin:0 4px 0 10px}
-#log{flex:1;min-height:0;overflow:auto}
-.m{margin:8px 0;padding:8px 12px;border-radius:10px;background:var(--bg)}
-.m.u{background:var(--ac);color:#fff;margin-left:20%}
-table{width:100%;border-collapse:collapse;font-size:.88rem}td,th{padding:4px 6px;border-bottom:1px solid var(--bd);text-align:left}.r{text-align:right}
-.chips button{margin:4px 4px 0 0;padding:5px 10px;font-size:.82rem}
-.lay{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:16px;align-items:start}
+.hero{background:var(--hero);color:#f3f6fb;border-radius:22px;padding:26px;margin:14px 0}
+.hero h2{font-size:1.7rem;font-weight:700;letter-spacing:-.02em;margin:0}
+.cap{color:rgba(243,246,251,.65);font-size:.92rem;margin:2px 0 22px}
+.kpis{display:grid;grid-template-columns:1.7fr repeat(4,1fr);gap:18px 28px;align-items:end}
+.kpi span{display:block;color:rgba(243,246,251,.65);font-size:.86rem}
+.kpi b{display:block;font-size:1.4rem;font-weight:650;letter-spacing:-.02em}
+.kpi.k0 b{font-size:2.9rem;line-height:1.05}
+.hero .pos{color:#34d399}.hero .out,.hero .neg{color:#fda4af}
+.chwrap{display:flex;margin-top:24px}
+#axis{flex:0 0 38px}#axis text{fill:rgba(243,246,251,.55);font-size:10px}
+.ch{flex:1;overflow-x:auto;scrollbar-width:thin}.ch svg{display:block}
+.ch line{stroke:rgba(255,255,255,.12)}.ch text{fill:rgba(243,246,251,.75);font-size:10px}.ch .yr{fill:rgba(243,246,251,.45);font-size:9px}
+.cm{cursor:pointer}.cm .hl{fill:transparent}.cm:hover .hl,.cm.on .hl{fill:rgba(255,255,255,.11)}
+rect.bi{fill:#34d399}rect.bg{fill:#fb7185}
+.lg{display:flex;gap:18px;flex-wrap:wrap;margin-top:14px;font-size:.85rem;color:rgba(243,246,251,.75)}
+.lg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px}
+.lay{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:18px;align-items:start}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:0 14px}
+.dn{display:flex;gap:18px;align-items:center;flex-wrap:wrap}.dn svg{flex:0 0 auto}
+.dt{font-size:4.4px;font-weight:700;fill:var(--fg)}.ds{font-size:2.8px;fill:var(--mut)}
+.lgd{flex:1;min-width:190px}
+.lr{display:grid;grid-template-columns:12px 1fr auto 80px;gap:8px;align-items:center;padding:5px 7px;border-radius:8px;font-size:.88rem}
+.lr i{width:10px;height:10px;border-radius:50%}.lr em{font-style:normal;color:var(--mut)}.lr b{text-align:right}
+.lr[data-k]{cursor:pointer}.lr[data-k]:hover{background:var(--bg)}.lr.on{box-shadow:inset 0 0 0 1.5px var(--ac)}
+.b{display:grid;grid-template-columns:100px 1fr 80px;gap:8px;align-items:center;margin:4px 0;font-size:.86rem}
+.b i{height:10px;border-radius:5px;background:var(--ac);width:var(--w);min-width:2px}.b b{text-align:right}
+table{width:100%;border-collapse:collapse;font-size:.92rem}
+td,th{padding:9px 8px;border-bottom:1px solid var(--bd);text-align:left}
+tr:hover td{background:var(--bg)}.r{text-align:right;font-weight:600}
+#tbl td:nth-child(2){color:var(--ac);font-weight:600}
 .chat{position:sticky;top:12px;height:calc(100vh - 24px);margin:0;display:flex;flex-direction:column}
 .chat .chips{max-height:108px;overflow-y:auto}
-@media(max-width:900px){.lay{grid-template-columns:1fr}.chat{position:static;height:560px}}
-.x{padding:0 7px;font-size:.8rem}
+.chips button{margin:4px 4px 0 0;padding:5px 12px;font-size:.82rem;border-radius:99px}
+#log{flex:1;min-height:0;overflow:auto;margin-top:6px}
+.m{margin:8px 0;padding:10px 13px;border-radius:14px 14px 14px 4px;background:var(--bg);max-width:96%}
+.m.u{background:var(--ac);color:var(--on);margin-left:auto;border-radius:14px 14px 4px 14px}
+.m table{font-size:.84rem}
+.qf{display:flex;gap:8px;margin-top:10px}
+@media(max-width:900px){.lay{grid-template-columns:1fr}.chat{position:static;height:560px}.kpis{grid-template-columns:1fr 1fr}.kpi.k0{grid-column:1/-1}.hero{padding:18px}}
 .hide{display:none}
 </style>
 </head>
 <body>
 <main>
 <h1>Mis gastos</h1>
-<p class="mut">Sube tu Excel (una hoja por mes: gastos en las columnas A-D, ingresos en F-H, cabeceras en la fila 3). Todo se calcula en tu navegador; los datos no se envían a ningún sitio.</p>
+<p class="sub">Sube tu Excel mensual (gastos en las columnas A a D, ingresos en F a H, cabeceras en la fila 3) o añade movimientos a mano. Todo se calcula en tu navegador.</p>
 
 <div class="card">
   <input type="file" id="f" accept=".xlsx,.xls,.csv" multiple class="hide">
@@ -83,12 +108,12 @@ table{width:100%;border-collapse:collapse;font-size:.88rem}td,th{padding:4px 6px
     <button class="s" onclick="limpiar()">Ver todo</button>
     <button id="chip" class="hide" onclick="setCat('')"></button>
   </div>
-  <div class="card"><div class="kpis" id="kpis"></div></div>
-  <div class="card">
-    <h2 id="hMes"></h2>
-    <div class="lg"><span style="background:var(--ac)"></span>Ingresos<span style="background:var(--rd)"></span>Gastos · toca un mes para filtrar</div>
-    <div class="ch" id="chart"></div>
-  </div>
+  <section class="hero">
+    <h2 id="hP"></h2><p class="cap" id="hMes"></p>
+    <div class="kpis" id="kpis"></div>
+    <div class="chwrap"><div id="axis"></div><div class="ch" id="chart"></div></div>
+    <div class="lg"><span><i style="background:#34d399"></i>Ingresos</span><span><i style="background:#fb7185"></i>Gastos</span><span>Toca un mes para filtrar todo el panel.</span></div>
+  </section>
   <div class="grid2">
     <div class="card"><h2>Gastos por categoría <span class="mut">(toca para filtrar)</span></h2><div id="porCat"></div></div>
     <div class="card"><h2>Ingresos por origen</h2><div id="porOri"></div></div>
@@ -107,7 +132,7 @@ table{width:100%;border-collapse:collapse;font-size:.88rem}td,th{padding:4px 6px
     <div class="row" style="justify-content:space-between"><h2>Pregunta sobre tus cuentas</h2><button class="s" style="padding:4px 10px;font-size:.8rem" onclick="$('log').innerHTML=''">Borrar chat</button></div>
     <div class="chips" id="chips"></div>
     <div id="log"></div>
-    <form onsubmit="return enviar()" style="margin-top:10px"><input type="text" id="q" placeholder="Ej: ¿cuánto ahorré en 2025?" autocomplete="off"></form>
+    <form class="qf" onsubmit="return enviar()"><input type="text" id="q" placeholder="Ej: ¿cuánto ahorré en 2025?" autocomplete="off"><button aria-label="Enviar pregunta">Enviar</button></form>
   </aside>
 </div>
 </main>
@@ -298,20 +323,37 @@ function bars(e,act){
   const mx=Math.max(...e.map(x=>x[1]),1);
   return e.map(([k,v])=>`<div class="b${k===act?' on':''}" data-k="${esc(k)}"><span>${esc(k)}</span><i style="--w:${v/mx*100}%"></i><b>${eur(v)}</b></div>`).join('')||'<span class="mut">Sin datos</span>';
 }
+const PAL=['#3a4bd6','#12926b','#e0485a','#f0a62a','#8b5cf6','#0ea5c6','#94a3b8'];
+function donut(e,act,tit){
+  const tot=e.reduce((t,x)=>t+x[1],0);
+  if(!tot)return '<span class="mut">Sin datos</span>';
+  const L=e.slice(0,6),rest=e.slice(6).reduce((t,x)=>t+x[1],0);if(rest>0)L.push(['otras',rest]);
+  let off=25;
+  const arcs=L.map(([k,v],i)=>{const q=v/tot*100,s=`<circle r="15.9155" cx="21" cy="21" fill="none" stroke="${PAL[i]}" stroke-width="5.5" stroke-dasharray="${q} ${100-q}" stroke-dashoffset="${off}"/>`;off-=q;return s}).join('');
+  return `<div class="dn"><svg viewBox="0 0 42 42" width="150" height="150" role="img" aria-label="${tit}">${arcs}<text x="21" y="21" text-anchor="middle" class="dt">${eur(tot)}</text><text x="21" y="26" text-anchor="middle" class="ds">${tit}</text></svg><div class="lgd">`
+   +L.map(([k,v],i)=>`<div class="lr${k===act?' on':''}"${k==='otras'?'':` data-k="${esc(k)}"`}><i style="background:${PAL[i]}"></i><span>${esc(k)}</span><em>${Math.round(v/tot*100)}%</em><b>${eur(v)}</b></div>`).join('')+'</div></div>';
+}
 function pintar(){
   $('app').classList.toggle('hide',!rows.length);
   if(!rows.length)return;
   const sub=sel(),G=sub.filter(x=>x.t==='g'),I=sub.filter(x=>x.t==='i');
   const nm=new Set(sub.map(x=>x.mes)).size||1,g=sum(G),i=sum(I);
-  $('kpis').innerHTML=[['Ingresos',eur(i)],['Gastos',eur(g)],['Balance',eur(i-g),i-g<0?'neg':''],['% ahorrado',i?Math.round((i-g)/i*100)+' %':'–',i-g<0?'neg':''],['Gasto medio/mes',eur(g/nm)]]
-    .map(([a,b,c])=>`<div class="kpi"><span class="mut">${a}</span><b class="${c||''}">${b}</b></div>`).join('');
+  $('kpis').innerHTML=[['Balance',eur(i-g),i-g<0?'neg':''],['Ingresos',eur(i),'pos'],['Gastos',eur(g),'out'],['Ahorrado',i?Math.round((i-g)/i*100)+' %':'–',''],['Gasto medio al mes',eur(g/nm),'']].map(([a,b,c],k)=>`<div class="kpi k${k}"><span>${a}</span><b class="${c}">${b}</b></div>`).join('');
   const ms=[...new Set(rows.filter(x=>!S.y||x.mes.startsWith(S.y)).map(x=>x.mes))].sort();
   const pm=ms.map(m=>{const a=rows.filter(x=>x.mes===m);return{m,g:sum(a.filter(x=>x.t==='g'&&(!S.cat||x.cat===S.cat))),i:S.cat?0:sum(a.filter(x=>x.t==='i'))}});
-  const mx=Math.max(...pm.flatMap(p=>[p.g,p.i]),1),on=S.y&&S.m?S.y+'-'+S.m:'';
-  $('hMes').textContent=S.cat?`Gasto en «${S.cat}» por mes`:'Ingresos y gastos por mes';
-  $('chart').innerHTML=pm.map(p=>`<div class="cm${p.m===on?' on':''}" data-m="${p.m}" title="${mesTxt(p.m)}: ingresos ${eur(p.i)} · gastos ${eur(p.g)}"><div class="bars"><i class="bi" style="height:${p.i/mx*100}%"></i><i class="bg" style="height:${p.g/mx*100}%"></i></div><small>${MESES[+p.m.slice(5)-1].slice(0,3)} ${p.m.slice(2,4)}</small></div>`).join('');
-  $('porCat').innerHTML=bars(Object.entries(group(G,'cat')).sort(desc),S.cat);
-  $('porOri').innerHTML=bars(Object.entries(group(I,'ori')).sort(desc));
+  const on=S.y&&S.m?S.y+'-'+S.m:'';
+  $('hP').textContent=[S.m?MESES[+S.m-1]:'',S.y].join(' ').trim()||'Todo el histórico';
+  $('hMes').textContent=S.cat?`Gasto en «${S.cat}» mes a mes`:'Ingresos y gastos mes a mes';
+  const raw=Math.max(...pm.flatMap(p=>[p.g,p.i]),1),e10=Math.pow(10,Math.floor(Math.log10(raw))),mxv=[1,2,2.5,5,10].map(k=>k*e10).find(v=>v>=raw);
+  const H=200,T=12,B=30,SL=36,ph=H-T-B,Y=v=>T+ph-v/mxv*ph,kf=v=>v>=1000?(v/1000)+'k':v;
+  $('axis').innerHTML=`<svg width="38" height="${H}">`+[0,1,2,3,4].map(k=>`<text x="34" y="${Y(mxv*k/4)+3}" text-anchor="end">${kf(mxv*k/4)}</text>`).join('')+'</svg>';
+  $('chart').innerHTML=`<svg width="${Math.max(pm.length*SL,300)}" height="${H}">`+[0,1,2,3,4].map(k=>`<line x1="0" x2="100%" y1="${Y(mxv*k/4)}" y2="${Y(mxv*k/4)}"/>`).join('')
+    +pm.map((p,k)=>{const x=k*SL+4;return `<g class="cm${p.m===on?' on':''}" data-m="${p.m}"><title>${mesTxt(p.m)}: ingresos ${eur(p.i)}, gastos ${eur(p.g)}</title><rect class="hl" x="${x-2}" y="0" width="${SL-4}" height="${H}" rx="8"/>`
+      +`<rect class="bi" x="${x+2}" y="${Y(p.i)}" width="12" height="${T+ph-Y(p.i)}" rx="3"/><rect class="bg" x="${x+16}" y="${Y(p.g)}" width="12" height="${T+ph-Y(p.g)}" rx="3"/>`
+      +`<text x="${x+15}" y="${H-14}" text-anchor="middle">${MESES[+p.m.slice(5)-1].slice(0,3)}</text>${p.m.slice(5)==='01'||!k?`<text class="yr" x="${x+15}" y="${H-3}" text-anchor="middle">${p.m.slice(2,4)}</text>`:''}</g>`}).join('')+'</svg>';
+  if(!S.y)$('chart').scrollLeft=1e6;
+  $('porCat').innerHTML=donut(Object.entries(group(G,'cat')).sort(desc),S.cat,'gastos');
+  $('porOri').innerHTML=donut(Object.entries(group(I,'ori')).sort(desc),'','ingresos');
   $('chip').classList.toggle('hide',!S.cat);$('chip').textContent='Categoría: '+S.cat+'  ✕';
   $('tg').className=S.tab==='g'?'':'s';$('ti').className=S.tab==='i'?'':'s';
   const q=norm($('s').value);
@@ -320,7 +362,7 @@ function pintar(){
     +(L.length>S.n?`<button class="s" onclick="S.n+=40;pintar()">Ver más (${L.length-S.n})</button>`:'')+`<p class="mut">${L.length} movimientos · ${eur(sum(L))}</p>`;
 }
 $('chart').onclick=e=>{const c=e.target.closest('.cm');if(c){S.y=c.dataset.m.slice(0,4);S.m=c.dataset.m.slice(5);S.n=40;sync();pintar()}};
-$('porCat').onclick=e=>{const b=e.target.closest('.b');if(b)setCat(b.dataset.k)};
+$('porCat').onclick=e=>{const b=e.target.closest('[data-k]');if(b)setCat(b.dataset.k)};
 
 /* ---------- chat ---------- */
 const tabla=(h,r)=>'<table><tr>'+h.map(x=>`<th>${x}</th>`).join('')+'</tr>'+r.map(a=>'<tr>'+a.map(c=>`<td>${c}</td>`).join('')+'</tr>').join('')+'</table>';
