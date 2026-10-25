@@ -58,15 +58,26 @@ table{width:100%;border-collapse:collapse;font-size:.92rem}
 td,th{padding:9px 8px;border-bottom:1px solid var(--bd);text-align:left}
 tr:hover td{background:var(--bg)}.r{text-align:right;font-weight:600}
 #tbl td:nth-child(2){color:var(--ac);font-weight:600}
-.chat{position:sticky;top:12px;height:calc(100vh - 24px);margin:0;display:flex;flex-direction:column}
-.chat .chips{max-height:108px;overflow-y:auto}
-.chips button{margin:4px 4px 0 0;padding:5px 12px;font-size:.82rem;border-radius:99px}
-#log{flex:1;min-height:0;overflow:auto;margin-top:6px}
-.m{margin:8px 0;padding:10px 13px;border-radius:14px 14px 14px 4px;background:var(--bg);max-width:96%}
-.m.u{background:var(--ac);color:var(--on);margin-left:auto;border-radius:14px 14px 4px 14px}
 .m table{font-size:.84rem}
-.qf{display:flex;gap:8px;margin-top:10px}
 @media(max-width:900px){.lay{grid-template-columns:1fr}.chat{position:static;height:560px}.kpis{grid-template-columns:1fr 1fr}.kpi.k0{grid-column:1/-1}.hero{padding:18px}}
+.chat{position:sticky;top:12px;height:min(640px,calc(100vh - 24px));margin:0;padding:0;display:flex;flex-direction:column;overflow:hidden}
+.chh{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--bd)}
+.chh div{flex:1;line-height:1.25}.chh b{font-family:'Bricolage Grotesque',system-ui,sans-serif;font-size:1.02rem}
+.chh small{display:block;color:var(--mut);font-size:.78rem}
+.av{width:34px;height:34px;border-radius:50%;background:var(--ac);color:var(--on);display:grid;place-items:center}
+#log{flex:1;min-height:0;overflow:auto;padding:14px 16px}
+.wl p{margin:0 0 4px}
+.sg{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.sc{display:block;text-align:left;background:var(--bg);color:var(--fg);box-shadow:inset 0 0 0 1px var(--bd);border-radius:12px;padding:10px 12px;font-weight:500;font-size:.88rem;line-height:1.3}
+.sc span{display:block;color:var(--ac);font-weight:600;font-size:.78rem;margin-bottom:2px}
+.sc:hover{box-shadow:inset 0 0 0 1.5px var(--ac);filter:none}
+.m{margin:8px 0;padding:10px 13px;border-radius:14px 14px 14px 4px;background:var(--bg);max-width:94%;font-size:.93rem}
+.m.u{background:var(--ac);color:var(--on);margin-left:auto;border-radius:14px 14px 4px 14px}
+.chips{display:flex;gap:6px;overflow-x:auto;padding:8px 16px 2px;scrollbar-width:none}
+.chips button{flex:0 0 auto;padding:5px 12px;font-size:.8rem;border-radius:99px;font-weight:500;white-space:nowrap}
+.qf{display:flex;gap:8px;padding:10px 16px 14px}
+.qf input{border-radius:99px;padding:10px 16px}
+.snd{width:42px;height:42px;padding:0;border-radius:50%;font-size:1.1rem}
 .hide{display:none}
 </style>
 </head>
@@ -129,10 +140,10 @@ tr:hover td{background:var(--bg)}.r{text-align:right;font-weight:600}
   </div>
 </div>
   <aside class="card chat">
-    <div class="row" style="justify-content:space-between"><h2>Pregunta sobre tus cuentas</h2><button class="s" style="padding:4px 10px;font-size:.8rem" onclick="$('log').innerHTML=''">Borrar chat</button></div>
-    <div class="chips" id="chips"></div>
+    <div class="chh"><span class="av">✦</span><div><b>Pregunta a tus cuentas</b><small>Responde con tus datos, sin salir del navegador</small></div><button class="s x" onclick="nuevoChat()">Nueva</button></div>
     <div id="log"></div>
-    <form class="qf" onsubmit="return enviar()"><input type="text" id="q" placeholder="Ej: ¿cuánto ahorré en 2025?" autocomplete="off"><button aria-label="Enviar pregunta">Enviar</button></form>
+    <div class="chips hide" id="chips"></div>
+    <form class="qf" onsubmit="return enviar()"><input type="text" id="q" placeholder="Escribe tu pregunta…" autocomplete="off"><button class="snd" aria-label="Enviar pregunta">↑</button></form>
   </aside>
 </div>
 </main>
@@ -312,9 +323,10 @@ function opciones(){
   const ys=[...new Set(rows.map(x=>x.mes.slice(0,4)))].sort();
   $('fy').innerHTML='<option value="">Todos los años</option>'+ys.map(y=>`<option>${y}</option>`).join('');
   $('fm').innerHTML='<option value="">Todos los meses</option>'+MESES.map((m,i)=>`<option value="${String(i+1).padStart(2,'0')}">${m}</option>`).join('');
-  $('chips').innerHTML=[`¿Cuánto ahorré en ${ys.at(-1)}?`,'¿Qué mes gasté más?','¿Qué mes ahorré más?',`Compara ${ys.at(-2)||ys[0]} y ${ys.at(-1)}`,'Resumen por año','¿Cuánto me dio mamá?','¿En qué gasto más?','Gastos más grandes','Media de gasto al mes']
-    .map(t=>`<button class="s" onclick="pregunta(this.textContent)">${esc(t)}</button>`).join('');
-  if(!$('log').children.length)$('log').innerHTML='<div class="m">¡Hola! Pregúntame por tus gastos, ingresos o ahorro. Toca una sugerencia o escribe tu pregunta.</div>';
+  const y1=ys.at(-1),y0=ys.at(-2)||ys[0];
+  SUG=[['Ahorro',`¿Cuánto ahorré en ${y1}?`],['Comparar',`Compara ${y0} y ${y1}`],['Meses','¿Qué mes gasté más?'],['Meses','¿Qué mes ahorré más?'],['Categorías','¿En qué gasto más?'],['Gastos','Gastos más grandes'],['Ingresos','¿Cuánto me dio mamá?'],['Resumen','Resumen por año'],['Media','Media de gasto al mes']];
+  $('chips').innerHTML=SUG.map(([,t])=>`<button class="s" onclick="pregunta(this.textContent)">${esc(t)}</button>`).join('');
+  if(!$('log').children.length)bienvenida();
 }
 function sync(){$('fy').value=S.y;$('fm').value=S.m}
 function limpiar(){S.y=S.m=S.cat='';S.n=40;sync();pintar()}
@@ -425,9 +437,18 @@ function responder(q){
   if(kind==='i')return `Ingresos${t} (${ps.map(lab).join(', ')}): <b>${eur(sum(I))}</b> en ${I.length} movimientos.`+(hit.length?'':bars(Object.entries(group(I,'ori')).sort(desc)));
   return `Gastos${t} (${ps.map(lab).join(', ')}): <b>${eur(sum(G))}</b> en ${G.length} movimientos.`;
 }
+let SUG=[];
+function bienvenida(){
+  $('log').innerHTML='<div class="wl"><p><b>Hola</b>, soy tu asistente de cuentas.</p><p class="mut">Pregúntame por gastos, ingresos o ahorro. Por ejemplo:</p><div class="sg">'
+    +SUG.slice(0,6).map(([a,t])=>`<button class="sc" data-t="${esc(t)}" onclick="pregunta(this.dataset.t)"><span>${a}</span>${esc(t)}</button>`).join('')+'</div></div>';
+  $('chips').classList.add('hide');
+}
+function nuevoChat(){bienvenida()}
 function pregunta(q){
-  $('log').insertAdjacentHTML('beforeend',`<div class="m u">${esc(q)}</div><div class="m">${responder(q)}</div>`);
-  $('log').scrollTop=1e9;
+  const l=$('log');l.querySelector('.wl')?.remove();$('chips').classList.remove('hide');
+  let r;try{r=responder(q)}catch(e){r='No he podido calcular eso. Prueba a reformular la pregunta.'}
+  l.insertAdjacentHTML('beforeend',`<div class="m u">${esc(q)}</div><div class="m">${r}</div>`);
+  l.scrollTop=1e9;
 }
 function enviar(){const q=$('q').value.trim();if(q){pregunta(q);$('q').value=''}return false}
 
