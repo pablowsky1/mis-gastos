@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Mis gastos</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Figtree:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -87,6 +90,7 @@ tr:hover td{background:var(--bg)}.r{text-align:right;font-weight:600}
 <p class="sub">Sube tu Excel mensual (gastos en las columnas A a D, ingresos en F a H, cabeceras en la fila 3) o añade movimientos a mano. Todo se calcula en tu navegador.</p>
 
 <div class="card">
+  <div id="cloud" class="row hide" style="margin-bottom:12px"><button id="cin" onclick="entrar()">Entrar con Google</button><button id="cout" class="s hide" onclick="salir()">Cerrar sesión</button><span id="cu" class="mut"></span></div>
   <input type="file" id="f" accept=".xlsx,.xls,.csv" multiple class="hide">
   <button onclick="f.click()">Subir ficheros</button>
   <button class="s" onclick="borrar()">Borrar datos del navegador</button>
@@ -149,6 +153,18 @@ tr:hover td{background:var(--bg)}.r{text-align:right;font-weight:600}
 </main>
 
 <script>
+/* ===== SINCRONIZACIÓN EN LA NUBE (Firebase) =====
+   Pega aquí los datos de tu proyecto (Firebase > Configuración del proyecto > Tus apps > SDK).
+   Mientras estén vacíos, la web funciona igual pero guardando solo en este navegador. */
+const FIREBASE={
+  apiKey:"AIzaSyCUaWPGVXrNq4GQGsArW8F11uYqfWGffxo",
+  authDomain:"mis-gastos-bb788.firebaseapp.com",
+  projectId:"mis-gastos-bb788",
+  storageBucket:"mis-gastos-bb788.firebasestorage.app",
+  messagingSenderId:"326216961455",
+  appId:"1:326216961455:web:386897c828aaa679f3335a"
+};
+
 const MESES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
 const STOP=new Set('cuanto cuantos cuantas gaste gasto gastos gastado gastar ingreso ingresos ahorre ahorro balance total media promedio mayor mayores veces mes meses mas menos que cual cuales por para del los las una con mis mio este esta ese ano anos pasado ultimo comparar compara respecto frente cada resumen dame dime euros dinero categoria categorias desglose reparto numero top maximo principales quien quienes dio dieron cobre recibi gane mejor peor como fue fueron'.split(' '));
 const ALIAS={spoty:'spotify',imprevistos:'imprevisto'};
@@ -234,12 +250,42 @@ $('f').onchange=async ev=>{
   }
   const keys=new Set(all.map(x=>x.src));
   rows=rows.filter(x=>!keys.has(x.src)).concat(all);
-  consolidar();guardar();
+  consolidar();all.forEach(x=>dirty.add(x.mes));guardar();
   $('msg').textContent=`${all.length} movimientos leídos de ${keys.size} hojas. Total en la web: ${rows.length}.`;
   const wb=$('warn');wb.classList.toggle('hide',!w.length);
   wb.innerHTML=`<summary>${w.length} avisos (fechas fuera de su hoja, etc.)</summary>`+w.slice(0,30).map(esc).join('<br>')+(w.length>30?`<br>…y ${w.length-30} más`:'');
   opciones();pintar();
 };
+let user=null,db=null,dirty=new Set();
+const mesesRef=()=>db.collection('users').doc(user.uid).collection('meses');
+async function nubeCargar(){const s=await mesesRef().get(),d=[];s.forEach(x=>d.push(...(x.data().rows||[])));return d}
+async function nubeGuardar(ms){
+  const b=db.batch();
+  [...ms].forEach(m=>b.set(mesesRef().doc(m),{rows:JSON.parse(JSON.stringify(rows.filter(x=>x.mes===m))),upd:Date.now()}));
+  await b.commit();
+}
+function nubeInit(){
+  if(!FIREBASE.projectId||typeof firebase==='undefined')return;
+  firebase.initializeApp(FIREBASE);db=firebase.firestore();
+  $('cloud').classList.remove('hide');
+  firebase.auth().onAuthStateChanged(async u=>{
+    user=u;$('cin').classList.toggle('hide',!!u);$('cout').classList.toggle('hide',!u);
+    $('cu').textContent=u?'Sesión: '+(u.displayName||u.email):'Entra para ver tus datos en cualquier dispositivo.';
+    if(!u)return;
+    try{
+      setSync('Sincronizando con la nube…');
+      const d=await nubeCargar();
+      if(d.length){rows=d;consolidar();try{localStorage.setItem('gastos_v2',JSON.stringify(rows))}catch{}opciones();sync();pintar();setSync(`Sincronizado ✓ ${rows.length} movimientos desde la nube.`)}
+      else if(rows.length){rows.forEach(x=>dirty.add(x.mes));guardar()}
+      else setSync('Sesión iniciada. Sube tu Excel o añade movimientos.');
+    }catch(e){setSync('No pude leer de la nube: '+e.message,1)}
+  });
+}
+function entrar(){
+  const a=firebase.auth(),p=new firebase.auth.GoogleAuthProvider();
+  a.signInWithPopup(p).catch(e=>{if(/popup-blocked|operation-not-supported/.test(e.code))a.signInWithRedirect(p);else setSync('No pude iniciar sesión: '+e.message,1)});
+}
+function salir(){firebase.auth().signOut();setSync('Sesión cerrada. Los datos siguen guardados en este navegador.')}
 let GH=null,sha=null,tm;
 const API=()=>`https://api.github.com/repos/${GH.repo}/contents/data/movimientos.json`;
 const GHH=()=>({Authorization:'Bearer '+GH.token,Accept:'application/vnd.github+json'});
@@ -264,6 +310,11 @@ async function ghGuardar(){
 }
 function guardar(){
   try{localStorage.setItem('gastos_v2',JSON.stringify(rows))}catch{}
+  if(user&&dirty.size){
+    const ms=new Set(dirty);dirty.clear();setSync('Guardando en la nube…');
+    nubeGuardar(ms).then(()=>setSync('Guardado en la nube ✓ '+new Date().toLocaleTimeString('es-ES')))
+      .catch(e=>{ms.forEach(m=>dirty.add(m));setSync('No pude guardar en la nube: '+e.message,1)});
+  }
   if(!GH)return;
   clearTimeout(tm);setSync('Guardando en GitHub…');
   tm=setTimeout(async()=>{try{await ghGuardar();setSync('Guardado en GitHub ✓ '+new Date().toLocaleTimeString('es-ES'))}catch(e){setSync('No pude guardar en GitHub: '+e.message,1)}},800);
@@ -287,10 +338,10 @@ function anadir(){
   if(!f||a===null||a<=0)return $('nmsg').textContent='Pon una fecha y un importe válido.';
   const x={t,fecha:f,mes:f.slice(0,7),cant:a,det:d,src:'manual'};
   if(t==='g'){x.c0=norm(c);x.cat=x.c0||'sin categoria'}else{x.cat='ingreso';x.det=(c+' '+d).trim();x.ori=origen(x.det)}
-  rows.push(x);consolidar();guardar();opciones();sync();pintar();
+  rows.push(x);dirty.add(x.mes);consolidar();guardar();opciones();sync();pintar();
   $('na').value=$('nd').value='';$('nmsg').textContent='Añadido ✓ '+eur(a)+' ('+(t==='g'?'gasto':'ingreso')+')';
 }
-function del(i){if(i<0||!confirm('¿Borrar este movimiento?'))return;rows.splice(i,1);consolidar();guardar();opciones();sync();pintar()}
+function del(i){if(i<0||!confirm('¿Borrar este movimiento?'))return;dirty.add(rows[i].mes);rows.splice(i,1);consolidar();guardar();opciones();sync();pintar()}
 function borrar(){try{localStorage.removeItem('gastos_v2')}catch{}rows=[];$('msg').textContent='Datos borrados.';$('warn').classList.add('hide');pintar()}
 
 /* ---------- exportar a Excel (mismo formato: una hoja por mes) ---------- */
@@ -460,6 +511,7 @@ if(GH)ghLeer().then(d=>{
   if(d){rows=d;consolidar();try{localStorage.setItem('gastos_v2',JSON.stringify(rows))}catch{}opciones();sync();pintar();setSync(`Sincronizado con GitHub ✓ (${rows.length} movimientos)`)}
   else setSync('Conectado a GitHub; el fichero se creará al guardar.')
 }).catch(e=>setSync('No pude leer de GitHub: '+e.message,1));
+nubeInit();
 </script>
 </body>
 </html>
