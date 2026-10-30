@@ -81,6 +81,28 @@ tr:hover td{background:var(--bg)}.r{text-align:right;font-weight:600}
 .qf{display:flex;gap:8px;padding:10px 16px 14px}
 .qf input{border-radius:99px;padding:10px 16px}
 .snd{width:42px;height:42px;padding:0;border-radius:50%;font-size:1.1rem}
+.top{display:flex;justify-content:space-between;align-items:center;gap:14px 20px;flex-wrap:wrap;margin-bottom:14px}
+.brand{display:flex;align-items:center;gap:12px}.brand h1{margin:0}.brand .sub{margin:0;font-size:.9rem}
+.logo{width:44px;height:44px;border-radius:13px;background:var(--hero);color:#34d399;display:grid;place-items:center;font:700 1.35rem 'Bricolage Grotesque',system-ui,sans-serif}
+.acct{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.st{margin-left:auto;font-size:.85rem;text-align:right}
+.dd{position:relative}
+summary.btn{list-style:none;display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:10px;font:600 .95rem 'Figtree',system-ui,sans-serif;color:var(--ac);box-shadow:inset 0 0 0 1.5px var(--ac);cursor:pointer;user-select:none}
+summary.btn::-webkit-details-marker{display:none}
+.dd[open] summary.btn{background:var(--bg)}
+.dm{position:absolute;top:calc(100% + 6px);left:0;z-index:30;min-width:250px;display:flex;flex-direction:column;gap:2px;padding:6px;background:var(--card);border:1px solid var(--bd);border-radius:12px;box-shadow:0 14px 36px rgba(16,24,40,.2)}
+.dm button{background:none;color:var(--fg);box-shadow:none;text-align:left;font-weight:500;padding:10px 12px}
+.dm button:hover{background:var(--bg);filter:none}
+.filt{padding:10px 14px;gap:8px}
+details.add{border-left:4px solid var(--ac)}
+.acct{padding:8px 12px;background:var(--card);border:1px solid var(--bd);border-radius:14px}
+.ainfo{line-height:1.25;min-width:0;max-width:300px}.ainfo b{display:block;font-size:.92rem}.ainfo small{font-size:.78rem}
+.av2{width:36px;height:36px;border-radius:50%;object-fit:cover}
+.gb{display:inline-flex;align-items:center}
+.g{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#fff;color:#4285f4;font:700 .8rem Arial,sans-serif;margin-right:8px}
+button:disabled{opacity:.5;cursor:not-allowed}
+.nw td{background:color-mix(in srgb,var(--ac) 14%,transparent)}
 .cl,.fab{display:none}
 @media(max-width:700px){
 main{padding:12px 12px calc(88px + env(safe-area-inset-bottom))}
@@ -120,30 +142,66 @@ details.card #nt,details.card #nf{flex:1 1 calc(50% - 5px)!important;width:auto!
 .fab{display:flex;align-items:center;position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom));z-index:40;border-radius:99px;padding:0 20px;box-shadow:0 8px 24px rgba(16,24,40,.3)}
 }
 @media(max-width:380px){.sg{grid-template-columns:1fr}.kpi.k0 b{font-size:2rem}}
+@media(max-width:700px){
+.top{flex-direction:column;align-items:flex-start;gap:10px}
+.acct{width:100%}.acct button{flex:0 0 auto}.ainfo{flex:1;max-width:none}
+.tools>button,.tools .dd{flex:1 1 auto}.tools .dd summary{width:100%;justify-content:center;min-height:44px}
+.st{margin-left:0;width:100%;text-align:left}
+.tools .dd:last-of-type .dm{left:auto;right:0}.dm{min-width:min(260px,80vw)}
+.logo{width:38px;height:38px}
+}
 .hide{display:none}
 </style>
 </head>
 <body>
 <main>
-<h1>Mis gastos</h1>
-<p class="sub">Sube tu Excel mensual (gastos en las columnas A a D, ingresos en F a H, cabeceras en la fila 3) o añade movimientos a mano. Todo se calcula en tu navegador.</p>
+<header class="top">
+  <div class="brand"><span class="logo">€</span><div><h1>Mis gastos</h1><p class="sub">Tus cuentas claras, en cualquier dispositivo.</p></div></div>
+  <div id="cloud" class="acct">
+    <img id="cav" class="av2 hide" alt="" referrerpolicy="no-referrer">
+    <div class="ainfo"><b id="cn">Sin sesión</b><small id="cu" class="mut">Entra para guardar tus datos en la nube y verlos en cualquier dispositivo.</small></div>
+    <button id="cin" class="gb" onclick="entrar()"><span class="g">G</span>Iniciar sesión con Google</button>
+    <button id="cout" class="s hide" onclick="salir()">Cerrar sesión</button>
+  </div>
+</header>
 
 <div class="card">
-  <div id="cloud" class="row hide" style="margin-bottom:12px"><button id="cin" onclick="entrar()">Entrar con Google</button><button id="cout" class="s hide" onclick="salir()">Cerrar sesión</button><span id="cu" class="mut"></span></div>
-  <input type="file" id="f" accept=".xlsx,.xls,.csv" multiple class="hide">
-  <button onclick="f.click()">Subir ficheros</button>
-  <button class="s" onclick="borrar()">Borrar datos del navegador</button>
-  <button class="s" onclick="exportar()">Descargar Excel</button>
-  <div id="msg" class="mut" style="margin-top:8px"></div>
+  <div class="tools">
+    <input type="file" id="f" accept=".xlsx,.xls,.csv" multiple class="hide">
+    <button onclick="f.click()">Subir Excel</button>
+    <details class="dd"><summary class="btn">Descargar Excel ▾</summary>
+      <div class="dm"><button onclick="exportar(false)">Todo el histórico</button><button id="expv" onclick="exportar(true)">Lo que estoy viendo</button></div></details>
+    <details class="dd"><summary class="btn">Más ▾</summary>
+      <div class="dm"><button onclick="borrar()">Borrar datos de este navegador</button></div></details>
+    <span id="sync" class="mut st"></span>
+  </div>
+  <div id="msg" class="mut" style="margin-top:10px"></div>
   <details id="warn" class="wa hide"></details>
   <details style="margin-top:10px"><summary class="mut">Guardar en GitHub (opcional): conserva tus datos y un historial de versiones</summary>
     <p class="mut">Crea un repositorio <b>privado</b> distinto al de esta web (por ejemplo <code>mis-gastos-datos</code>, con README) y un token en GitHub → Settings → Developer settings → Fine-grained tokens: solo para ese repo, permiso <i>Contents: Read and write</i> y fecha de caducidad. El token se guarda únicamente en este navegador.</p>
     <div class="row"><input type="text" id="ghr" placeholder="usuario/repositorio" style="flex:1;min-width:180px"><input type="password" id="ght" placeholder="Token" style="flex:1;min-width:180px"><button onclick="conectar()">Conectar</button><button class="s" onclick="desconectar()">Desconectar</button></div>
   </details>
-  <div id="sync" class="mut" style="margin-top:6px"></div>
 </div>
 
-  <details class="card" open><summary style="font-size:1.05rem"><b>➕ Añadir un gasto o ingreso</b></summary>
+<div id="app" class="lay"><div>
+  <div class="card row filt dat">
+    <span class="mut">Periodo:</span>
+    <select id="fy" onchange="S.y=this.value;S.n=40;pintar()"></select>
+    <select id="fm" onchange="S.m=this.value;S.n=40;pintar()"></select>
+    <button class="s" onclick="limpiar()">Ver todo</button>
+    <button id="chip" class="hide" onclick="setCat('')"></button>
+  </div>
+    <section class="hero dat">
+    <h2 id="hP"></h2><p class="cap" id="hMes"></p>
+    <div class="kpis" id="kpis"></div>
+    <div class="chwrap"><div id="axis"></div><div class="ch" id="chart"></div></div>
+    <div class="lg"><span><i style="background:#34d399"></i>Ingresos</span><span><i style="background:#fb7185"></i>Gastos</span><span>Toca un mes para filtrar todo el panel.</span></div>
+  </section>
+  <div class="grid2 dat">
+    <div class="card"><h2>Gastos por categoría <span class="mut">(toca para filtrar)</span></h2><div id="porCat"></div></div>
+    <div class="card"><h2>Ingresos por origen</h2><div id="porOri"></div></div>
+  </div>
+    <details class="card add" open><summary><b>➕ Añadir un gasto o ingreso</b></summary>
     <div class="row" style="margin-top:10px">
       <select id="nt"><option value="g">Gasto</option><option value="i">Ingreso</option></select>
       <input type="date" id="nf">
@@ -154,25 +212,7 @@ details.card #nt,details.card #nf{flex:1 1 calc(50% - 5px)!important;width:auto!
     </div>
     <datalist id="cl"></datalist><div id="nmsg" class="mut" style="margin-top:6px"></div>
   </details>
-<div id="app" class="lay hide"><div>
-  <div class="card row">
-    <span class="mut">Periodo:</span>
-    <select id="fy" onchange="S.y=this.value;S.n=40;pintar()"></select>
-    <select id="fm" onchange="S.m=this.value;S.n=40;pintar()"></select>
-    <button class="s" onclick="limpiar()">Ver todo</button>
-    <button id="chip" class="hide" onclick="setCat('')"></button>
-  </div>
-  <section class="hero">
-    <h2 id="hP"></h2><p class="cap" id="hMes"></p>
-    <div class="kpis" id="kpis"></div>
-    <div class="chwrap"><div id="axis"></div><div class="ch" id="chart"></div></div>
-    <div class="lg"><span><i style="background:#34d399"></i>Ingresos</span><span><i style="background:#fb7185"></i>Gastos</span><span>Toca un mes para filtrar todo el panel.</span></div>
-  </section>
-  <div class="grid2">
-    <div class="card"><h2>Gastos por categoría <span class="mut">(toca para filtrar)</span></h2><div id="porCat"></div></div>
-    <div class="card"><h2>Ingresos por origen</h2><div id="porOri"></div></div>
-  </div>
-  <div class="card">
+  <div class="card dat">
     <h2>Movimientos</h2>
     <div class="row" style="margin-bottom:8px">
       <button id="tg" onclick="S.tab='g';S.n=40;pintar()">Gastos</button>
@@ -182,13 +222,13 @@ details.card #nt,details.card #nf{flex:1 1 calc(50% - 5px)!important;width:auto!
     <div id="tbl" style="overflow-x:auto"></div>
   </div>
 </div>
-  <aside class="card chat">
+  <aside class="card chat dat">
     <div class="chh"><span class="av">✦</span><div><b>Pregunta a tus cuentas</b><small>Responde con tus datos, sin salir del navegador</small></div><button class="s x" onclick="nuevoChat()">Nueva</button><button class="s x cl" onclick="toggleChat()">Cerrar</button></div>
     <div id="log"></div>
     <div class="chips hide" id="chips"></div>
     <form class="qf" onsubmit="return enviar()"><input type="text" id="q" placeholder="Escribe tu pregunta…" autocomplete="off"><button class="snd" aria-label="Enviar pregunta">↑</button></form>
   </aside>
-  <button class="fab" onclick="toggleChat()">✦ Preguntar</button>
+  <button class="fab dat" onclick="toggleChat()">✦ Preguntar</button>
 </div>
 </main>
 
@@ -218,7 +258,7 @@ const sum=a=>a.reduce((t,x)=>t+x.cant,0);
 const group=(a,k)=>a.reduce((o,x)=>(o[x[k]]=(o[x[k]]||0)+x.cant,o),{});
 const desc=(a,b)=>b[1]-a[1];
 const origen=d=>(ORIGEN.find(([r])=>r.test(norm(d)))||[0,'otros'])[1];
-let rows=[],S={y:'',m:'',cat:'',tab:'g',n:40};
+let LAST=null,rows=[],S={y:'',m:'',cat:'',tab:'g',n:40};
 
 /* ---------- lectura ---------- */
 function num(x){
@@ -305,21 +345,26 @@ async function nubeGuardar(ms){
   await b.commit();
 }
 function nubeInit(){
-  if(!FIREBASE.projectId||typeof firebase==='undefined')return;
-  firebase.initializeApp(FIREBASE);db=firebase.firestore();
-  $('cloud').classList.remove('hide');
-  firebase.auth().onAuthStateChanged(async u=>{
-    user=u;$('cin').classList.toggle('hide',!!u);$('cout').classList.toggle('hide',!u);
-    $('cu').textContent=u?'Sesión: '+(u.displayName||u.email):'Entra para ver tus datos en cualquier dispositivo.';
-    if(!u)return;
-    try{
-      setSync('Sincronizando con la nube…');
-      const d=await nubeCargar();
-      if(d.length){rows=d;consolidar();try{localStorage.setItem('gastos_v2',JSON.stringify(rows))}catch{}opciones();sync();pintar();setSync(`Sincronizado ✓ ${rows.length} movimientos desde la nube.`)}
-      else if(rows.length){rows.forEach(x=>dirty.add(x.mes));guardar()}
-      else setSync('Sesión iniciada. Sube tu Excel o añade movimientos.');
-    }catch(e){setSync('No pude leer de la nube: '+e.message,1)}
-  });
+  const aviso=m=>{$('cin').disabled=true;$('cu').textContent=m};
+  if(!FIREBASE.projectId)return aviso('Falta configurar Firebase en el código de la web.');
+  if(typeof firebase==='undefined')return aviso('No se pudo cargar el servicio de Google. Revisa la conexión o desactiva bloqueadores.');
+  try{
+    firebase.initializeApp(FIREBASE);db=firebase.firestore();
+    firebase.auth().onAuthStateChanged(async u=>{
+      user=u;$('cin').classList.toggle('hide',!!u);$('cout').classList.toggle('hide',!u);
+      $('cn').textContent=u?(u.displayName||u.email):'Sin sesión';
+      $('cu').textContent=u?(u.email||'Datos sincronizados con tu cuenta'):'Entra para guardar tus datos en la nube y verlos en cualquier dispositivo.';
+      $('cav').classList.toggle('hide',!(u&&u.photoURL));if(u&&u.photoURL)$('cav').src=u.photoURL;
+      if(!u)return;
+      try{
+        setSync('Sincronizando con la nube…');
+        const d=await nubeCargar();
+        if(d.length){rows=d;consolidar();try{localStorage.setItem('gastos_v2',JSON.stringify(rows))}catch{}opciones();sync();pintar();setSync(`Sincronizado ✓ ${rows.length} movimientos desde la nube.`)}
+        else if(rows.length){rows.forEach(x=>dirty.add(x.mes));guardar()}
+        else setSync('Sesión iniciada. Sube tu Excel o añade movimientos.');
+      }catch(e){setSync('No pude leer de la nube: '+e.message,1)}
+    });
+  }catch(e){aviso('Error al iniciar Firebase: '+e.message)}
 }
 function entrar(){
   const a=firebase.auth(),p=new firebase.auth.GoogleAuthProvider();
@@ -378,7 +423,11 @@ function anadir(){
   if(!f||a===null||a<=0)return $('nmsg').textContent='Pon una fecha y un importe válido.';
   const x={t,fecha:f,mes:f.slice(0,7),cant:a,det:d,src:'manual'};
   if(t==='g'){x.c0=norm(c);x.cat=x.c0||'sin categoria'}else{x.cat='ingreso';x.det=(c+' '+d).trim();x.ori=origen(x.det)}
-  rows.push(x);dirty.add(x.mes);consolidar();guardar();opciones();sync();pintar();
+  rows.push(x);dirty.add(x.mes);consolidar();guardar();
+  LAST=x;S.tab=t;S.n=40;$('s').value='';
+  if((S.y&&S.y!==x.mes.slice(0,4))||(S.m&&S.m!==x.mes.slice(5))){S.y=x.mes.slice(0,4);S.m=x.mes.slice(5)}
+  if(t==='g'&&S.cat&&S.cat!==x.cat)S.cat='';
+  opciones();sync();pintar();
   $('na').value=$('nd').value='';$('nmsg').textContent='Añadido ✓ '+eur(a)+' ('+(t==='g'?'gasto':'ingreso')+')';
 }
 function del(i){if(i<0||!confirm('¿Borrar este movimiento?'))return;dirty.add(rows[i].mes);rows.splice(i,1);consolidar();guardar();opciones();sync();pintar()}
@@ -386,12 +435,13 @@ function borrar(){try{localStorage.removeItem('gastos_v2')}catch{}rows=[];$('msg
 
 /* ---------- exportar a Excel (mismo formato: una hoja por mes) ---------- */
 const ser=iso=>Math.round(Date.UTC(+iso.slice(0,4),+iso.slice(5,7)-1,+iso.slice(8,10))/864e5)+25569;
-function exportar(){
-  if(!rows.length)return alert('No hay datos que exportar.');
+function exportar(vista){
+  const R=vista?sel():rows;
+  if(!R.length)return alert('No hay datos que exportar.');
   try{
-    const wb=XLSX.utils.book_new(),ms=[...new Set(rows.map(x=>x.mes))].sort(),orden=(a,b)=>a.fecha.localeCompare(b.fecha);
+    const wb=XLSX.utils.book_new(),ms=[...new Set(R.map(x=>x.mes))].sort(),orden=(a,b)=>a.fecha.localeCompare(b.fecha);
     ms.forEach(m=>{
-      const a=rows.filter(x=>x.mes===m),G=a.filter(x=>x.t==='g').sort(orden),I=a.filter(x=>x.t==='i').sort(orden),n=Math.max(G.length,I.length);
+      const a=R.filter(x=>x.mes===m),G=a.filter(x=>x.t==='g').sort(orden),I=a.filter(x=>x.t==='i').sort(orden),n=Math.max(G.length,I.length);
       const aoa=[[],['GASTOS','','','','','INGRESOS'],['FECHA','CANTIDAD','GASTO','ESPECIFICACIÓN','','FECHA','CANTIDAD','PROVENIENCIA']];
       for(let k=0;k<n;k++){const g=G[k],i=I[k];aoa.push([g?ser(g.fecha):'',g?g.cant:'',g?g.cat:'',g?g.det:'','',i?ser(i.fecha):'',i?i.cant:'',i?i.det:''])}
       aoa.push(['TOTAL','','','','','TOTAL',''],[],[],['','','BALANCE','']);
@@ -403,7 +453,7 @@ function exportar(){
       ws['!cols']=[12,11,16,30,3,12,11,28].map(w=>({wch:w}));
       XLSX.utils.book_append_sheet(wb,ws,(MESES[+m.slice(5)-1][0].toUpperCase()+MESES[+m.slice(5)-1].slice(1)+m.slice(2,4)).slice(0,31));
     });
-    XLSX.writeFile(wb,'gastos_'+new Date().toISOString().slice(0,10)+'.xlsx');
+    XLSX.writeFile(wb,'gastos_'+(vista?(S.y||'todo')+(S.m?'-'+S.m:'')+'_':'')+new Date().toISOString().slice(0,10)+'.xlsx');
   }catch(e){alert('No pude crear el Excel: '+e.message)}
 }
 
@@ -437,7 +487,7 @@ function donut(e,act,tit){
    +L.map(([k,v],i)=>`<div class="lr${k===act?' on':''}"${k==='otras'?'':` data-k="${esc(k)}"`}><i style="background:${PAL[i]}"></i><span>${esc(k)}</span><em>${Math.round(v/tot*100)}%</em><b>${eur(v)}</b></div>`).join('')+'</div></div>';
 }
 function pintar(){
-  $('app').classList.toggle('hide',!rows.length);
+  document.querySelectorAll('.dat').forEach(e=>e.classList.toggle('hide',!rows.length));
   if(!rows.length)return;
   const sub=sel(),G=sub.filter(x=>x.t==='g'),I=sub.filter(x=>x.t==='i');
   const nm=new Set(sub.map(x=>x.mes)).size||1,g=sum(G),i=sum(I);
@@ -446,6 +496,7 @@ function pintar(){
   const pm=ms.map(m=>{const a=rows.filter(x=>x.mes===m);return{m,g:sum(a.filter(x=>x.t==='g'&&(!S.cat||x.cat===S.cat))),i:S.cat?0:sum(a.filter(x=>x.t==='i'))}});
   const on=S.y&&S.m?S.y+'-'+S.m:'';
   $('hP').textContent=[S.m?MESES[+S.m-1]:'',S.y].join(' ').trim()||'Todo el histórico';
+  $('expv').textContent='Lo que estoy viendo ('+$('hP').textContent.toLowerCase()+')';
   $('hMes').textContent=S.cat?`Gasto en «${S.cat}» mes a mes`:'Ingresos y gastos mes a mes';
   const raw=Math.max(...pm.flatMap(p=>[p.g,p.i]),1),e10=Math.pow(10,Math.floor(Math.log10(raw))),mxv=[1,2,2.5,5,10].map(k=>k*e10).find(v=>v>=raw);
   const H=200,T=12,B=30,SL=36,ph=H-T-B,Y=v=>T+ph-v/mxv*ph,kf=v=>v>=1000?(v/1000)+'k':v;
@@ -461,7 +512,7 @@ function pintar(){
   $('tg').className=S.tab==='g'?'':'s';$('ti').className=S.tab==='i'?'':'s';
   const q=norm($('s').value);
   const L=sub.filter(x=>x.t===S.tab&&(S.tab!=='g'||!S.cat||x.cat===S.cat)&&(!q||norm(x.det+' '+(x.cat||'')+' '+(x.ori||'')).includes(q))).sort((a,b)=>b.fecha.localeCompare(a.fecha));
-  $('tbl').innerHTML='<table>'+L.slice(0,S.n).map(x=>`<tr><td>${x.fecha}</td><td>${esc(x.t==='g'?x.cat:x.ori)}</td><td>${esc(x.det)}</td><td class="r">${eur(x.cant)}</td><td><button class="s x" title="Borrar" onclick="del(${rows.indexOf(x)})">✕</button></td></tr>`).join('')+'</table>'
+  $('tbl').innerHTML='<table>'+L.slice(0,S.n).map(x=>`<tr${x===LAST?' class="nw"':''}><td>${x.fecha}</td><td>${esc(x.t==='g'?x.cat:x.ori)}</td><td>${esc(x.det)}</td><td class="r">${eur(x.cant)}</td><td><button class="s x" title="Borrar" onclick="del(${rows.indexOf(x)})">✕</button></td></tr>`).join('')+'</table>'
     +(L.length>S.n?`<button class="s" onclick="S.n+=40;pintar()">Ver más (${L.length-S.n})</button>`:'')+`<p class="mut">${L.length} movimientos · ${eur(sum(L))}</p>`;
 }
 $('chart').onclick=e=>{const c=e.target.closest('.cm');if(c){S.y=c.dataset.m.slice(0,4);S.m=c.dataset.m.slice(5);S.n=40;sync();pintar()}};
@@ -535,6 +586,7 @@ function bienvenida(){
   $('chips').classList.add('hide');
 }
 function nuevoChat(){bienvenida()}
+document.addEventListener('click',e=>document.querySelectorAll('details.dd[open]').forEach(d=>{if(!d.contains(e.target)||e.target.closest('.dm button'))d.open=false}));
 function toggleChat(){const o=document.querySelector('.chat').classList.toggle('open');document.body.classList.toggle('ch-open',o)}
 function pregunta(q){
   const l=$('log');l.querySelector('.wl')?.remove();$('chips').classList.remove('hide');
